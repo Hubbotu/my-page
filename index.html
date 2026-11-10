@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cooking Buff Finder</title>
+<style>
+:root{--bg:#f4efe6;--fg:#2a2118;--panel:#fffaf0;--bd:#c9b896;--ac:#a8641a;--mut:#7a6a55;--chip:#efe3cc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17120e;--fg:#eadfca;--panel:#241c15;--bd:#4a3b2a;--ac:#e0a040;--mut:#a08c70;--chip:#33271b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17120e;--fg:#eadfca;--panel:#241c15;--bd:#4a3b2a;--ac:#e0a040;--mut:#a08c70;--chip:#33271b;color-scheme:dark}
+html,body{margin:0}body{background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,sans-serif;min-height:100vh;padding:12px}
+button,input,select{font:inherit;color:inherit}
+.win{background:var(--panel);border:1px solid var(--bd);border-radius:8px;max-width:340px;padding:12px;margin-bottom:12px}
+.win h3{margin:0 0 8px;font-size:15px}
+.btn{background:var(--ac);color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer}
+#bf{position:fixed;top:60px;left:50%;transform:translateX(-50%);width:min(680px,calc(100vw - 16px));max-height:calc(100vh - 80px);display:flex;flex-direction:column;background:var(--panel);border:2px solid var(--ac);border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:5}
+#bf[hidden]{display:none}
+#hd{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--bd);cursor:move;touch-action:none}
+#hd b{flex:1}
+#hd select,#hd button{background:var(--chip);border:1px solid var(--bd);border-radius:4px;padding:2px 6px;cursor:pointer}
+.fl{padding:8px 10px;border-bottom:1px solid var(--bd);display:grid;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{background:var(--chip);border:1px solid var(--bd);border-radius:12px;padding:2px 9px;cursor:pointer;font-size:12px}
+.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.row2{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row2 label{display:flex;gap:4px;align-items:center;color:var(--mut);font-size:12px}
+.row2 input,.row2 select{background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:3px 6px}
+input[type=number]{width:60px}input[type=search]{flex:1;min-width:120px}
+.res{overflow:auto;flex:1}
+table{width:100%;border-collapse:collapse}
+th{position:sticky;top:0;background:var(--panel);text-align:left;font-size:12px;color:var(--mut);padding:4px 10px;border-bottom:1px solid var(--bd)}
+td{padding:4px 10px;border-bottom:1px solid var(--chip)}
+td a{color:var(--ac);text-decoration:none}td a:hover{text-decoration:underline}
+.n{text-align:right;width:50px}
+#ft{padding:6px 10px;font-size:12px;color:var(--mut);border-top:1px solid var(--bd)}
+</style></head><body>
+<div class="win"><h3 id="ct">Cooking</h3><div style="color:var(--mut);margin-bottom:8px">Mock cooking window (CamelotUI host)</div><button class="btn" id="open"></button></div>
+
+<div id="bf" role="dialog" aria-labelledby="ttl">
+ <div id="hd"><b id="ttl"></b><select id="lang" aria-label="Language"><option value="en">English</option><option value="ru">Русский</option><option value="de">Deutsch</option></select><button id="x" aria-label="Close">✕</button></div>
+ <div class="fl">
+  <div class="chips" id="chips"></div>
+  <div class="row2">
+   <input type="search" id="q">
+   <label><span id="l1"></span><input type="number" id="sk" min="1" max="300" value="300"></label>
+   <label><span id="l2"></span><input type="number" id="mv" min="0" value="0"></label>
+   <label><span id="l3"></span><select id="so"><option value="s"></option><option value="v"></option><option value="n"></option></select></label>
+   <button class="chip" id="rs"></button>
+  </div>
+ </div>
+ <div class="res"><table><thead><tr><th id="h1"></th><th class="n" id="h2"></th><th id="h3"></th></tr></thead><tbody id="tb"></tbody></table></div>
+ <div id="ft"></div>
+</div>
+
+<script>
+// ---- DATA: [itemId, requiredSkill, value, nameRu]. In-game, resolve names with GetItemInfo(itemId) so EN/DE names come from the client.
+const D={
+ap:[[6290,1,2,"Блестящая рыбка"],[787,50,6,"Скользкая скумбрия"],[4592,50,10,"Илистый луциан"],[8364,175,20,"Мифрилоголовая форель"],[13927,225,30,"Мощь-рыба в кляре"],[13932,250,40,"Вареный радужный лосось"],[13934,275,40,"Стейк из мощь-рыбы"]],
+sp:[[5095,50,1,"Радужный тунец"],[21072,80,4,"Копченый шалфокунь"],[21217,175,7,"Деликатес из шалфокуня"],[274971,200,14,"Соленый суп из морепродуктов"],[274971,225,22,"Соленый суп из морепродуктов"],[13931,250,22,"Суп из ночницы"],[13935,250,28,"Запеченный лосось"],[249869,200,33,"Солнечный чай"]],
+he:[[249865,25,2,"Мирный чай"],[249866,100,7,"Королевский чай"],[249867,125,11,"Чай из корешков"],[249868,180,22,"Тройной чай"],[13933,275,28,"Похлебка из омаров"],[249870,250,44,"Чай мудреца"]],
+st:[[6888,1,1,"Яйцо с травами"],[5472,10,1,"Кальдорайский шашлык из паука"],[263509,25,1,"Суфле Небесной выси"],[3663,90,1,"Суп из плавников мурлока"],[250080,75,3,"Омлет на завтрак"],[5479,100,3,"Хрустящий хвост ящерицы"],[12213,175,3,"Десерт из мертвечины"],[3665,130,5,"Невероятно вкусный омлет"],[3666,110,5,"Пирожок из паучатины"],[3729,175,5,"Нежный черепаховый суп"],[12214,175,5,"Загадочная похлебка"],[250078,175,10,"Яичница из гигантских яиц"],[6038,175,10,"Гигантский жареный моллюск"],[12215,200,10,"Сытная похлебка из кодо"],[12218,225,15,"Чудовищный омлет"],[17222,200,15,"Паучья колбаска"],[250068,275,20,"Вкусная черепашья похлебка"]],
+str:[[2888,25,1,"Кабаньи ребрышки в пиве"],[6890,40,1,"Копченая медвежатина"],[2681,50,1,"Жареная кабанина"],[724,50,3,"Пирожок из печени жутеклыка"],[3220,60,3,"Кровяная колбаса"],[3726,110,3,"Стейк из мяса большого медведя"],[2687,110,3,"Сушеные свиные ребрышки"],[2685,110,5,"Сочные свиные ребрышки"],[5480,110,5,"Постная оленина"],[250074,175,10,"Медвежья рулька"],[274976,185,10,"Старый добрый бледноклык"],[250065,225,15,"Вкусные сэндвичи с олениной"],[250070,275,20,"Брускетта с медвежатиной"],[250071,275,20,"Дымящийся стейк из оленины"],[20452,285,20,"Копченые пустынные клецки"]],
+ag:[[2680,25,1,"Волчатина с пряностями"],[2684,50,3,"Стейк из койота"],[3662,80,3,"Стейк из кроколиска"],[1017,100,5,"Приправленная котлета из волчатины"],[3727,100,5,"Острая отбивная из мяса льва"],[3664,125,5,"Суп из кроколиска"],[12209,125,5,"Постный стейк из волчатины"],[13851,175,10,"Острая волчья грудинка"],[20074,150,10,"Сытная похлебка из кроколиска"],[12212,125,15,"Похлебка \"Джунгли\""],[18045,225,15,"Сочный стейк из волчатины"],[250072,275,20,"Стейк молниеносного удара"],[250069,275,20,"Перченое мясо с бока"]],
+in:[[12224,1,1,"Хрустящее крылышко летучей мыши"],[250079,25,1,"Вкусные кусочки мяса ящера"],[263512,35,1,"Крабьи дольки"],[5477,50,1,"Похлебка из долгонога"],[2682,85,1,"Вареная клешня краба"],[2683,75,3,"Пирожок с мясом краба"],[1082,100,3,"Гуляш по-красногорски"],[250077,75,3,"Переперченный кусок мяса ящера"],[12210,175,5,"Жареный ящер"],[4457,175,10,"Жареное крыло канюка"],[12216,225,10,"Острое крабовое чили"],[250073,275,10,"Ребрышки разъяренного ящера"],[250076,225,15,"Рулеты из мяса ящера"],[18254,275,15,"Десерт из корня Рун-Тум"],[250066,275,20,"Парящая памплона"],[250067,175,20,"Хаше из нетопырей"],[250075,275,20,"Томленое мясо доисторического ящера"]],
+sx:[[249871,25,1,"Ядовитый смузи"],[249872,100,3,"Слизистый смузи"],[249873,125,5,"Мрргл смурлзи"],[249874,125,10,"Окаменевший смузи"],[249875,200,15,"Пряный смузи"],[249876,250,20,"Порочный смузи"]],
+sp2:[[733,75,15,"Похлебка Западного Края"],[267341,275,15,"Повидло \"Пальчики оближешь\""]],
+cr:[[13928,240,1,"Жареный кальмар"],[13929,240,1,"Острый копченый окунь"]],
+ar:[[286152,225,150,"Латная бронерыба"]],
+fi:[[6316,100,3,"Деликатес из бешенки"],[5476,50,5,"Филе бешенки"],[4593,100,8,"Зубатка ощетиненная"],[4594,100,12,"Каменношкурая треска"],[8957,100,18,"Палтус шипохвостый"],[13930,225,18,"Филе красноперки"]],
+hb:[[10841,100,15,"Чай из златошипа"]]};
+// ---- I18N (names of stats + UI). {v} = value
+const T={
+en:{open:"Buff Finder",title:"Cooking Buff Finder",cook:"Cooking",ph:"Search dish or bonus…",skill:"My skill",minv:"Min bonus",sort:"Sort",so:["Skill","Bonus","Name"],reset:"Reset",dish:"Dish",sk:"Skill",bon:"Bonus",res:"{n} of {t} dishes",none:"No dishes match these filters.",note:"Names shown in Russian; in-game they come from the client.",
+ st:{ap:"Attack Power",sp:"Spell Damage",he:"Healing Power",st:"Stamina",str:"Strength",ag:"Agility",in:"Intellect",sx:"Spirit",sp2:"Movement Speed",cr:"Crit Chance",ar:"Armor",fi:"Fishing",hb:"Herbalism"},
+ f:{sp2:"+{v}% movement speed",cr:"+{v}% critical strike chance"}},
+ru:{open:"Поиск баффов",title:"Поиск баффов кулинарии",cook:"Кулинария",ph:"Поиск блюда или бонуса…",skill:"Мой навык",minv:"Мин. бонус",sort:"Сорт.",so:["Навык","Бонус","Название"],reset:"Сброс",dish:"Блюдо",sk:"Навык",bon:"Бонус",res:"{n} из {t} блюд",none:"Нет блюд по заданным фильтрам.",note:"Названия на русском (из исходных данных).",
+ st:{ap:"Сила атаки",sp:"Урон от заклинаний",he:"Сила исцеления",st:"Выносливость",str:"Сила",ag:"Ловкость",in:"Интеллект",sx:"Дух",sp2:"Скорость",cr:"Крит. удар",ar:"Броня",fi:"Рыбная ловля",hb:"Сбор трав"},
+ f:{ap:"+{v} к силе атаки",sp:"+{v} к урону от заклинаний",he:"+{v} к силе исцеления",st:"+{v} к выносливости",str:"+{v} к силе",ag:"+{v} к ловкости",in:"+{v} к интеллекту",sx:"+{v} к духу",sp2:"{v}% к скорости передвижения",cr:"+{v}% к вероятности критического удара",ar:"+{v} к броне",fi:"+{v} к навыку рыбной ловли",hb:"+{v} к навыку сбора трав"}},
+de:{open:"Buff-Suche",title:"Kochkunst-Buff-Suche",cook:"Kochkunst",ph:"Gericht oder Bonus suchen…",skill:"Mein Skill",minv:"Min. Bonus",sort:"Sort.",so:["Skill","Bonus","Name"],reset:"Zurücksetzen",dish:"Gericht",sk:"Skill",bon:"Bonus",res:"{n} von {t} Gerichten",none:"Keine Gerichte für diese Filter.",note:"Namen auf Russisch; im Spiel kommen sie vom Client.",
+ st:{ap:"Angriffskraft",sp:"Zauberschaden",he:"Heilung",st:"Ausdauer",str:"Stärke",ag:"Beweglichkeit",in:"Intelligenz",sx:"Willenskraft",sp2:"Bewegungstempo",cr:"Kritische Treffer",ar:"Rüstung",fi:"Angeln",hb:"Kräuterkunde"},
+ f:{sp2:"+{v}% Bewegungstempo",cr:"+{v}% kritische Trefferchance"}}};
+const $=id=>document.getElementById(id);
+const rows=[];for(const k in D)D[k].forEach(([id,s,v,n])=>rows.push({k,id,s,v,n}));
+const S={lang:"en",on:new Set()};
+const bonus=(r,t)=>(t.f[r.k]||"+{v} "+t.st[r.k]).replace("{v}",r.v);
+function render(){
+ const t=T[S.lang],q=$("q").value.trim().toLowerCase(),sk=+$("sk").value||300,mv=+$("mv").value||0,so=$("so").value;
+ let L=rows.filter(r=>(!S.on.size||S.on.has(r.k))&&r.s<=sk&&r.v>=mv&&(!q||r.n.toLowerCase().includes(q)||bonus(r,t).toLowerCase().includes(q)));
+ L.sort((a,b)=>so==="s"?a.s-b.s||b.v-a.v:so==="v"?b.v-a.v||a.s-b.s:a.n.localeCompare(b.n,"ru"));
+ $("tb").innerHTML=L.length?L.map(r=>`<tr><td><a href="https://www.wowhead.com/forever/${S.lang}/item=${r.id}" target="_blank" rel="noopener">${r.n}</a></td><td class="n">${r.s}</td><td>${bonus(r,t)}</td></tr>`).join(""):`<tr><td colspan="3" style="color:var(--mut)">${t.none}</td></tr>`;
+ $("ft").textContent=t.res.replace("{n}",L.length).replace("{t}",rows.length)+" · "+t.note;
+}
+function labels(){
+ const t=T[S.lang];document.documentElement.lang=S.lang;
+ $("open").textContent=t.open;$("ttl").textContent=t.title;$("ct").textContent=t.cook;$("q").placeholder=t.ph;
+ $("l1").textContent=t.skill;$("l2").textContent=t.minv;$("l3").textContent=t.sort;$("rs").textContent=t.reset;
+ [...$("so").options].forEach((o,i)=>o.textContent=t.so[i]);
+ $("h1").textContent=t.dish;$("h2").textContent=t.sk;$("h3").textContent=t.bon;
+ $("chips").innerHTML=Object.keys(t.st).map(k=>`<button class="chip${S.on.has(k)?" on":""}" data-k="${k}" aria-pressed="${S.on.has(k)}">${t.st[k]}</button>`).join("");
+ render();
+}
+$("chips").onclick=e=>{const k=e.target.dataset.k;if(!k)return;S.on.has(k)?S.on.delete(k):S.on.add(k);labels()};
+$("lang").onchange=e=>{S.lang=e.target.value;labels()};
+["q","sk","mv","so"].forEach(i=>$(i).oninput=render);
+$("rs").onclick=()=>{S.on.clear();$("q").value="";$("sk").value=300;$("mv").value=0;$("so").value="s";labels()};
+$("x").onclick=()=>$("bf").hidden=true;$("open").onclick=()=>$("bf").hidden=false;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("bf").hidden=true});
+// draggable window
+let d=null;$("hd").onpointerdown=e=>{if(e.target.closest("select,button"))return;const b=$("bf").getBoundingClientRect();d={x:e.clientX-b.left,y:e.clientY-b.top};$("hd").setPointerCapture(e.pointerId)};
+$("hd").onpointermove=e=>{if(!d)return;const f=$("bf");f.style.transform="none";f.style.left=e.clientX-d.x+"px";f.style.top=Math.max(0,e.clientY-d.y)+"px"};
+$("hd").onpointerup=()=>d=null;
+labels();
+</script></body></html>
